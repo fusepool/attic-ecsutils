@@ -1,7 +1,10 @@
-Example Apache Stanbol Component
+patentutils
 ===========
 
-This is an example Apache Stanbol component.
+This component provides utility commands for 
+- uploading and deletion of RDF data into the content graph
+- creation of textual data for indexing and retrieval from the ECS
+- linking of entities from enhancements or transformations
 
 To compile the engine run
 
@@ -11,8 +14,3 @@ To deploy the engine to a stanbol instance running on localhost port 8080 run
 
     mvn org.apache.sling:maven-sling-plugin:install
 
-
-After installing a new menu item pointing you to /PatentInserter will appear.
-
-The example service allows to look up resources using the site-manager. The 
-service can be accessed via browser as HTML or as RDF for machine clients.
