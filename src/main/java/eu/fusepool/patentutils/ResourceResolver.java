@@ -37,7 +37,6 @@ import org.apache.clerezza.rdf.core.TypedLiteral;
 import org.apache.clerezza.rdf.core.UriRef;
 import org.apache.clerezza.rdf.core.access.EntityAlreadyExistsException;
 import org.apache.clerezza.rdf.core.access.LockableMGraph;
-import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.core.access.security.TcAccessController;
 import org.apache.clerezza.rdf.core.access.security.TcPermission;
 import org.apache.clerezza.rdf.core.impl.PlainLiteralImpl;
@@ -78,6 +77,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.fusepool.ecs.ontologies.ECS;
+import org.apache.clerezza.platform.graphprovider.content.ContentGraphProvider;
 
 /**
  * Add dcterm:subject and sioc:content properties to pmo:PatentPublication. The content is created from patent's title and abstract.
@@ -106,7 +106,7 @@ public class ResourceResolver {
 	 * This service allows accessing and creating persistent triple collections
 	 */
 	@Reference
-	private TcManager tcManager;
+	private ContentGraphProvider contentGraphProvider;
 
 	@Reference
 	private Parser parser;
@@ -352,7 +352,7 @@ public class ResourceResolver {
 	 * @return the MGraph to which the requests are logged
 	 */
 	private LockableMGraph getContentGraph() {
-		return tcManager.getMGraph(CONTENT_GRAPH_NAME);
+		return contentGraphProvider.getContentGraph();
 	}
 
 }
