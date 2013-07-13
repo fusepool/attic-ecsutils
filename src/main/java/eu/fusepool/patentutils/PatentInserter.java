@@ -87,13 +87,13 @@ import org.apache.clerezza.platform.graphprovider.content.ContentGraphProvider;
 @Service(Object.class)
 @Property(name = "javax.ws.rs", boolValue = true)
 @Path("PatentInserter")
-public class ResourceResolver {
+public class PatentInserter {
 
     /**
      * Using slf4j for normal logging
      */
     private static final Logger log = LoggerFactory
-            .getLogger(ResourceResolver.class);
+            .getLogger(PatentInserter.class);
     private static final double CONFIDENCE_THRESHOLD = 0.3;
     /**
      * This service allows to get entities from configures sites
@@ -113,12 +113,10 @@ public class ResourceResolver {
     private EnhancementJobManager enhancementJobManager;
     @Reference
     private ChainManager chainManager;
+
     /**
      * This is the name of the graph in which we "log" the requests
      */
-    private UriRef CONTENT_GRAPH_NAME = new UriRef(
-            "urn:x-localinstance:/content.graph");
-
     @Activate
     protected void activate(ComponentContext context) {
         log.info("The example service is being activated");
@@ -183,17 +181,6 @@ public class ResourceResolver {
     }
 
     @GET
-    @Path("add-inventors")
-    @Produces("text/plain")
-    public String addInventors() {
-        for (GraphNode patent  : getAllPatents()) {
-            aliasAsDcSubject(patent, new UriRef(
-                    "http://www.patexpert.org/ontologies/pmo.owl#inventor"));
-        }
-        return "done";
-    }
-
-    @GET
     @Path("delete")
     public String deleteAll() throws IOException, EnhancementException {
 
@@ -202,9 +189,16 @@ public class ResourceResolver {
         return "deleted all triples in content graph";
     }
 
+    @POST
+    @Path("sameAsSmush")
+    public String sameAsSmush(TripleCollection sameAsTriples) {
+        SameAsSmusher.smush(getContentGraph(), sameAsTriples);
+        return "fine";
+    }
     /*
      * Add a sioc:content property to a resource. The content is created from dc:title and dc:abstract properties 
      */
+
     private void enrich(GraphNode resourceNode) throws IOException,
             EnhancementException {
         String textContent = "";
@@ -220,12 +214,10 @@ public class ResourceResolver {
 
         enhance(textContent, resourceNode);
 
-        
         resourceNode.addPropertyValue(SIOC.content, textContent);
 
         aliasAsDcSubject(resourceNode, new UriRef(
-                    "http://www.patexpert.org/ontologies/pmo.owl#applicant"));
-        
+                "http://www.patexpert.org/ontologies/pmo.owl#applicant"));
 
         // Resources with this type have sioc:content and rdfs:label indexed by the ECS when added to the content graph
         resourceNode.addProperty(RDF.type, ECS.ContentItem);
@@ -253,28 +245,6 @@ public class ResourceResolver {
                 if (!patentNode.getObjects(SIOC.content).hasNext()) {
                     result.add(patentNode);
                 }
-            }
-        } finally {
-            l.unlock();
-        }
-        return result;
-    }
-
-    private Set<GraphNode> getAllPatents() {
-        Set<GraphNode> result = new HashSet<GraphNode>();
-        LockableMGraph contentGraph = getContentGraph();
-        Lock l = contentGraph.getLock().readLock();
-        l.lock();
-        try {
-            UriRef patentPublication = new UriRef(
-                    "http://www.patexpert.org/ontologies/pmo.owl#PatentPublication");
-            Iterator<Triple> ipatent = contentGraph.filter(null, RDF.type,
-                    patentPublication);
-            while (ipatent.hasNext()) {
-                Triple patentTriple = ipatent.next();
-                GraphNode patentNode = new GraphNode(patentTriple.getSubject(),
-                        contentGraph);
-                result.add(patentNode);
             }
         } finally {
             l.unlock();
@@ -367,6 +337,28 @@ public class ResourceResolver {
      */
     private LockableMGraph getContentGraph() {
         return contentGraphProvider.getContentGraph();
+    }
+
+    private Set<GraphNode> getAllPatents() {
+        Set<GraphNode> result = new HashSet<GraphNode>();
+        LockableMGraph contentGraph = getContentGraph();
+        Lock l = contentGraph.getLock().readLock();
+        l.lock();
+        try {
+            UriRef patentPublication = new UriRef(
+                    "http://www.patexpert.org/ontologies/pmo.owl#PatentPublication");
+            Iterator<Triple> ipatent = contentGraph.filter(null, RDF.type,
+                    patentPublication);
+            while (ipatent.hasNext()) {
+                Triple patentTriple = ipatent.next();
+                GraphNode patentNode = new GraphNode(patentTriple.getSubject(),
+                        contentGraph);
+                result.add(patentNode);
+            }
+        } finally {
+            l.unlock();
+        }
+        return result;
     }
 
     private void aliasAsDcSubject(GraphNode resourceNode, UriRef predicate) {
