@@ -181,6 +181,18 @@ public class PatentInserter {
     }
 
     @GET
+    @Path("add-inventors")
+    @Produces("text/plain")
+    public String addInventors() {
+        for (GraphNode patent  : getAllPatents()) {
+            aliasAsDcSubject(patent, new UriRef(
+                    "http://www.patexpert.org/ontologies/pmo.owl#inventor"));
+        }
+        return "done";
+    }
+
+    
+    @GET
     @Path("delete")
     public String deleteAll() throws IOException, EnhancementException {
 
