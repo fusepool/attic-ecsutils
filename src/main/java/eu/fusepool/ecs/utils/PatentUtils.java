@@ -161,17 +161,6 @@ public class PatentUtils {
     }
 
     
-    @GET
-    @Path("delete")
-    public String deleteAll() throws IOException, EnhancementException {
-
-        getContentGraph().clear();
-
-        return "deleted all triples in content graph";
-    }
-
-    
-    
     /*
      * Add a sioc:content property to a resource. The content is created from dcterm:title and dcterms:abstract properties 
      */
