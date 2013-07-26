@@ -9,11 +9,13 @@ This component provides utility commands for
 - smushing equivalent uris by choosing one uri as target uri and replacing all the aliases that appear as subject or
   object in triples with it.
 
-To compile the engine run
+To compile the bundle run
 
     mvn install
 
 To deploy the engine to a stanbol instance running on localhost port 8080 run
 
     mvn org.apache.sling:maven-sling-plugin:install
+    
+
 
