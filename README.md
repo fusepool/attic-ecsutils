@@ -2,9 +2,12 @@ ECS Utils
 ===========
 
 This component provides utility commands for 
-- uploading and deletion of RDF data into the content graph
-- creation of textual data for indexing and retrieval from the ECS
-- linking of entities from enhancements or transformations
+- upload of RDF data into the ECS (content graph)
+- enrichment of patent documents and PubMed articles by addition of sioc:content property for indexing and 
+  dc.subject properties between documents and entities extracted from transformation of XML data into RDF or
+  extracted by NLP components (enhancements)
+- smushing equivalent uris by one uri as target uri to substitute all the aliases that appear as subjects or
+  objects in triples.
 
 To compile the engine run
 
