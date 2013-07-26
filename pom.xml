@@ -11,13 +11,18 @@
     
     <groupId>eu.fusepool</groupId>
     <artifactId>ecs.utils</artifactId>
-     <description>Utility commands for uploading and deletion of RDF data into the content graph, creation of textual data for indexing and retrieval from the ECS, linking of entities from enhancements or transformations. </description>
+     <description>
+                   Utility commands for uploading and deletion of RDF data in the content graph,
+                   creation of textual content for indexing and retrieval from the ECS of patent documents
+                   and PubMed articles, smushing entities to use a target uri for each of them and replacing
+                   aliases.
+     </description>
     
     <version>1.0-SNAPSHOT</version>
   
     <packaging>bundle</packaging>
 
-    <name>PatentUtils</name>
+    <name>ECS Utils</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
