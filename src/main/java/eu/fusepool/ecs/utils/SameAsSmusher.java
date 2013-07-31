@@ -66,35 +66,52 @@ public class SameAsSmusher {
     	
     	log.info("Starting smushing");
         
-    	// contains a uri (that is the target uri) and the set of equivalen uris
+    	// This hashmap contains a uri (key) and the set of equivalent uris (value)
     	final Map<NonLiteral, Set<NonLiteral>> node2EquivalenceSet = new HashMap<NonLiteral, Set<NonLiteral>>();
-        
-    	for (Iterator<Triple> it = owlSameStatements.iterator(); it.hasNext();) {
-            final Triple triple = it.next();
+    	
+    	log.info("Creating the sets of equivalent uris of each subject or object in the owl:sameAs statements");
+    	// Determines for each subject and object in all the owl:sameAs statements the set of ewquivalent uris 
+    	for (Iterator<Triple> it = owlSameStatements.iterator(); it.hasNext();) {            
+    		final Triple triple = it.next();
             final UriRef predicate = triple.getPredicate();
             if (!predicate.equals(OWL.sameAs)) {
                 throw new RuntimeException("Statements must use only <http://www.w3.org/2002/07/owl#sameAs> predicate.");
             }
             final NonLiteral subject = triple.getSubject();
             final NonLiteral object = (NonLiteral)triple.getObject();
+            
             Set<NonLiteral> equivalentNodes = node2EquivalenceSet.get(subject);
+            
+            // if there is not a set of equivalent uris then create a new set
             if (equivalentNodes == null) {
             	equivalentNodes = node2EquivalenceSet.get(object);
             	if (equivalentNodes == null) {
                     equivalentNodes = new HashSet<NonLiteral>();
                 }
             }
-            node2EquivalenceSet.put(subject, equivalentNodes);
-            node2EquivalenceSet.put(object, equivalentNodes);
+            
+            // add both subject and object of the owl:sameAs statement to the set of equivalent uris
             equivalentNodes.add(subject);
             equivalentNodes.add(object);
-        }
+            
+            // use both uris in the owl:sameAs statement as keys for the set of equivalent uris
+            node2EquivalenceSet.put(subject, equivalentNodes);
+            node2EquivalenceSet.put(object, equivalentNodes);
+            
+            log.info("Sets of equivalent uris created.");
+        
+    	}
     	
-        Set<Set<NonLiteral>> unitedEquivalenceSets = new HashSet<Set<NonLiteral>>(node2EquivalenceSet.values());
-        log.info("Equivalence sets created");
-        Map<NonLiteral, NonLiteral> current2ReplacementMap = new HashMap<NonLiteral, NonLiteral>();
-        final MGraph newOwlSameStatements = new SimpleMGraph();
-        for (Set<NonLiteral> equivalenceSet : unitedEquivalenceSets) {
+    	// This set contains the sets of equivalent uris
+    	Set<Set<NonLiteral>> unitedEquivalenceSets = new HashSet<Set<NonLiteral>>(node2EquivalenceSet.values());
+    	// This hashmap contains all the uris (key) with their target uri (value)
+    	Map<NonLiteral, NonLiteral> current2ReplacementMap = new HashMap<NonLiteral, NonLiteral>();
+    	
+    	// This graph contains the owl:sameAs statement with the equivalent uris as subject and their target uri as object
+    	final MGraph newOwlSameStatements = new SimpleMGraph();
+        
+    	// for each set of equivalent uri select a target uri and fill a map with all the equivalent uris as keys and their target uri as value
+    	for (Set<NonLiteral> equivalenceSet : unitedEquivalenceSets) {
             final NonLiteral replacement = getReplacementFor(equivalenceSet, newOwlSameStatements);
             for (NonLiteral current : equivalenceSet) {
                 if (!current.equals(replacement)) {
@@ -102,19 +119,20 @@ public class SameAsSmusher {
                 }
             }
         }
-        
+    
+    	// This set contains the new triples with the target uris in place of the their equivalent uris
         final Set<Triple> newTriples = new HashSet<Triple>();
+        
+        // replace subject and object in all triples in the graph if there is a target uri for those uris
         for (Iterator<Triple> it = mGraph.iterator(); it.hasNext();) {
-            final Triple triple = it.next();
-            Triple replacementTriple = null;
+            final Triple triple = it.next();            
             final NonLiteral subject = triple.getSubject();
-            NonLiteral subjectReplacement =
-                    current2ReplacementMap.get(subject);
             final Resource object = triple.getObject();
+            NonLiteral subjectReplacement = current2ReplacementMap.get(subject);
             @SuppressWarnings("element-type-mismatch")
             Resource objectReplacement = current2ReplacementMap.get(object);
             if ((subjectReplacement != null) || (objectReplacement != null)) {
-                it.remove();
+                it.remove(); //removes this triple from the graph
                 if (subjectReplacement == null) {
                     subjectReplacement = subject;
                 }
@@ -125,40 +143,59 @@ public class SameAsSmusher {
                         triple.getPredicate(), objectReplacement));
             }
         }
+        
+        // add the updated triples to the graph
         for (Triple triple : newTriples) {
-            mGraph.add(triple);
+        	mGraph.add(triple);
         }
+        
+        // add the new owl:sameAs statements to the graph. this should be avoided if the uri comes from the same dataset i.e. do not come from
+        // an external dataset (like dbpedia.org)
         mGraph.addAll(newOwlSameStatements);
-        log.info("Smushing done.");
+        
+        log.info("Smush completed.");
     }
 
-    private static NonLiteral getReplacementFor(Set<NonLiteral> equivalenceSet, 
-            MGraph owlSameAsGraph) {
-        final Set<UriRef> uriRefs = new HashSet<UriRef>();
+    /**
+     * Takes the first uri in a set of equivalent uris to be the target (preferred) uri then creates new owl:sameAs statements
+     * between the target uri and all the equivalent uris in the set.
+     * @param equivalenceSet
+     * @param owlSameAsGraph
+     * @return
+     */
+    private static NonLiteral getReplacementFor(Set<NonLiteral> equivalenceSet, MGraph owlSameAsGraph) {
+        
+    	final Set<UriRef> uriRefs = new HashSet<UriRef>();
+        
         for (NonLiteral nonLiteral : equivalenceSet) {
             if (nonLiteral instanceof UriRef) {
-                uriRefs.add((UriRef) nonLiteral);
+                uriRefs.add( (UriRef) nonLiteral );
             }
         }
+        
         switch (uriRefs.size()) {
             case 1:
                 return uriRefs.iterator().next();
             case 0:
                 return new BNode();
         }
+        
         final Iterator<UriRef> uriRefIter = uriRefs.iterator();
+        
         //instead of an arbitrary one we might either decide lexicographically
         //or look at their frequency in mGraph
         final UriRef first = uriRefIter.next();
+        
         while (uriRefIter.hasNext()) {
             UriRef uriRef = uriRefIter.next();
             owlSameAsGraph.add(new TripleImpl(uriRef, OWL.sameAs, first));
         }
+        
         return first;
     }
 
    
-
+    /**
     static class PredicateObject {
 
         final UriRef predicate;
@@ -202,5 +239,6 @@ public class SameAsSmusher {
 
 
     };
+    */
 }
 
