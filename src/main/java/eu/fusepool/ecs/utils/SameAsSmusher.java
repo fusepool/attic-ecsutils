@@ -57,18 +57,14 @@ public class SameAsSmusher {
 	private final static Logger log = LoggerFactory.getLogger(SameAsSmusher.class);
 	
     /**
-     * smush mGaph given the ontological facts. Currently it does only
-     * one step ifp smushin, i.e. only ifps are taken in account and only
-     * nodes that have the same node as ifp object in the orignal graph are
-     * equates. (calling the method a second time might lead to additional
-     * smushings.)
+     * Smush graph given a set of triples all containing  <http://www.w3.org/2002/07/owl#sameAs> predicate.
      *
      * @param mGraph
      * @param tBox
      */
     public static void smush(MGraph mGraph, TripleCollection owlSameStatements) {
     	
-    	log.info("Starting smushing. Collecting equivalent URIs.");
+    	log.info("Starting smushing");
         
     	// contains a uri (that is the target uri) and the set of equivalen uris
     	final Map<NonLiteral, Set<NonLiteral>> node2EquivalenceSet = new HashMap<NonLiteral, Set<NonLiteral>>();
@@ -77,7 +73,7 @@ public class SameAsSmusher {
             final Triple triple = it.next();
             final UriRef predicate = triple.getPredicate();
             if (!predicate.equals(OWL.sameAs)) {
-                throw new RuntimeException("owlSameStatements must be owlSameStatements only.");
+                throw new RuntimeException("Statements must use only <http://www.w3.org/2002/07/owl#sameAs> predicate.");
             }
             final NonLiteral subject = triple.getSubject();
             final NonLiteral object = (NonLiteral)triple.getObject();
@@ -134,17 +130,6 @@ public class SameAsSmusher {
         }
         mGraph.addAll(newOwlSameStatements);
         log.info("Smushing done.");
-    }
-
-    private static Set<UriRef> getIfps(TripleCollection tBox) {
-        final Iterator<Triple> ifpDefinitions = tBox.filter(null, RDF.type,
-                OWL.InverseFunctionalProperty);
-        final Set<UriRef> ifps = new HashSet<UriRef>();
-        while (ifpDefinitions.hasNext()) {
-            final Triple triple = ifpDefinitions.next();
-            ifps.add((UriRef) triple.getSubject());
-        }
-        return ifps;
     }
 
     private static NonLiteral getReplacementFor(Set<NonLiteral> equivalenceSet, 
