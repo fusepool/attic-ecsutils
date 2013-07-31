@@ -112,7 +112,7 @@ public class EcsUtils {
         final GraphNode node = new GraphNode(serviceUri, responseGraph);
         //The triples will be added to the first graph of the union
         //i.e. to the in-memory responseGraph
-        node.addProperty(RDF.type, Ontology.MultiEnhancer);
+        //node.addProperty(RDF.type, Ontology.MultiEnhancer);
         node.addProperty(RDFS.comment, new PlainLiteralImpl("A set of utilities for the ECS"));
         //What we return is the GraphNode we created with a template path
         return new RdfViewable("EcsUtils", node, EcsUtils.class);
