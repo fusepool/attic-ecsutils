@@ -86,7 +86,7 @@ import org.apache.clerezza.platform.graphprovider.content.ContentGraphProvider;
 @Component
 @Service(Object.class)
 @Property(name = "javax.ws.rs", boolValue = true)
-@Path("PatentUtils")
+@Path("patent")
 public class PatentUtils {
 
     /**
