@@ -69,7 +69,7 @@ import eu.fusepool.ecs.ontologies.ECS;
 @Component
 @Service(Object.class)
 @Property(name = "javax.ws.rs", boolValue = true)
-@Path("PubMedUtils")
+@Path("pubmed")
 public class PubMedUtils {
 	
 	/**
