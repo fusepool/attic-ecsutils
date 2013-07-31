@@ -75,10 +75,11 @@ public class PubMedUtils {
 	/**
      * Using slf4j for normal logging
      */
-    private static final Logger log = LoggerFactory
-            .getLogger(PatentUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(PatentUtils.class);
+    
+    //Confidence threshold to accept entities found by an NLP enhancement process
     private static final double CONFIDENCE_THRESHOLD = 0.3;
-    private static final String BIBO_NS = "http://purl.org/ontology/bibo/";
+    
     /**
      * This service allows to get entities from configures sites
      */
@@ -120,15 +121,27 @@ public class PubMedUtils {
     @Path("test")
     @Produces("text/plain")
     public String testService(@Context final UriInfo uriInfo,
-            @QueryParam("uri") final URL uri) throws Exception {
+            @QueryParam("query") final String query) throws Exception {
         AccessController.checkPermission(new AllPermission());
-        String userInfo = uriInfo.getBaseUri().getUserInfo();
+        String uriInfoStr = uriInfo.getRequestUri().toString();
         
-        return "Test PubMedUtils service Ok. User: " + userInfo + ", uri parameter: " + uri.toString();
+        String response = "no query. Add a query param for a response message /test?query=<your query>";
+        
+        if(!(query == null)) {
+        	response = "parrot's response: " + query;
+        }
+        
+        return "Test PubMedUtils service Ok. Request URI: " + uriInfoStr + ". Response: " + response;
     }
     
-    /*
-     * Filter all pmo:PatentPublication that do not have Add a sioc:content property to each PatentPublication 
+    /**
+     * Filter all pmo:PatentPublication that do not have a sioc:content property then for each of these resources does the following
+     * 1) create a text content from the dcterms:title and dcterms:abstract properties
+     * 2) add a new sioc:content property to the resource with the created text content
+     * 3) create a content item with the same resource's uri using the text content and send this content item to a default chain for enhancements
+     * 4) for each enhancement found adds a dc:subject property to the resource (i.e.: <:documemt> <cd:subject> <:enhancement>)
+     * 5) adds other dc:subject statements for pmo:inventor(s) and pmo:applicant(s) 
+     *  
      */
     @GET
     @Path("enrich")
@@ -148,15 +161,14 @@ public class PubMedUtils {
      * Select all bibo:Document that do not have a sioc:content property
      */
     private Set<GraphNode> getUnenrichedArticles() {
-        //TODO base on getAllPatents
+        
         Set<GraphNode> result = new HashSet<GraphNode>();
         LockableMGraph contentGraph = getContentGraph();
         Lock l = contentGraph.getLock().readLock();
         l.lock();
         try {
-            UriRef biboDocument = new UriRef(BIBO_NS + "Document");
-            Iterator<Triple> idocument = contentGraph.filter(null, RDF.type,
-            		biboDocument);
+            
+            Iterator<Triple> idocument = contentGraph.filter(null, RDF.type, BibliographicOntology.Document);
             while (idocument.hasNext()) {
                 Triple triple = idocument.next();
                 GraphNode node = new GraphNode(triple.getSubject(),
@@ -246,12 +258,12 @@ public class PubMedUtils {
     }
     
     /* 
-     * Add dc:subject property to a pmo:PatentPublication with entities extracted by engines in the default chain
+     * Add dc:subject property to a pmo:PatentPublication with entities extracted by enhancement engines in the default chain
      * 
      */
     /**
      * Given a node and a TripleCollection containing fise:Enhancements about
-     * this node this method adds dc:subject properties to node pointing to
+     * this node this method adds dc:subject properties to it pointing to
      * entities referenced by those enhancements if the enhancement confidence
      * value is above a threshold.
      *
