@@ -92,9 +92,11 @@ public class PatentUtils {
     /**
      * Using slf4j for normal logging
      */
-    private static final Logger log = LoggerFactory
-            .getLogger(PatentUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(PatentUtils.class);
+    
+    //Confidence threshold to accept entities found by an NLP enhancement process
     private static final double CONFIDENCE_THRESHOLD = 0.3;
+    
     /**
      * This service allows to get entities from configures sites
      */
@@ -136,15 +138,21 @@ public class PatentUtils {
     @Path("test")
     @Produces("text/plain")
     public String testService(@Context final UriInfo uriInfo,
-            @QueryParam("uri") final URL uri) throws Exception {
+            @QueryParam("query") final String query) throws Exception {
         AccessController.checkPermission(new AllPermission());
-        String userInfo = uriInfo.getBaseUri().getUserInfo();
+        String uriInfoStr = uriInfo.getRequestUri().toString();
         
-        return "Test PatentUtils service Ok. uri parameter: " + uri.toString();
+        String response = "no query. Add a query param for a response message /test?query=<your query>";
+        
+        if(!(query == null)) {
+        	response = "parrot's response: " + query;
+        }
+        
+        return "Test PatentUtils service Ok. Request URI: " + uriInfoStr + ". Response: " + response;
     }
 
     /*
-     * Filter all pmo:PatentPublication that do not have Add a sioc:content property to each PatentPublication 
+     * Filter all pmo:PatentPublication that do not have a sioc:content property 
      */
     @GET
     @Path("enrich")
@@ -186,9 +194,9 @@ public class PatentUtils {
         resourceNode.addPropertyValue(SIOC.content, textContent);
 
         //add a dc:subject statement to each applicant
-        aliasAsDcSubject(resourceNode, new UriRef("http://www.patexpert.org/ontologies/pmo.owl#applicant"));
+        aliasAsDcSubject(resourceNode, PatentOntology.applicant);
         //add a dc:subject statement to each inventor
-        aliasAsDcSubject(resourceNode, new UriRef("http://www.patexpert.org/ontologies/pmo.owl#inventor"));
+        aliasAsDcSubject(resourceNode, PatentOntology.inventor);
         
 
         // Resources with this type have sioc:content and rdfs:label indexed by the ECS when added to the content graph
@@ -206,10 +214,7 @@ public class PatentUtils {
         Lock l = contentGraph.getLock().readLock();
         l.lock();
         try {
-            UriRef patentPublication = new UriRef(
-                    "http://www.patexpert.org/ontologies/pmo.owl#PatentPublication");
-            Iterator<Triple> ipatent = contentGraph.filter(null, RDF.type,
-                    patentPublication);
+            Iterator<Triple> ipatent = contentGraph.filter(null, RDF.type, PatentOntology.PatentPublication);
             while (ipatent.hasNext()) {
                 Triple patentTriple = ipatent.next();
                 GraphNode patentNode = new GraphNode(patentTriple.getSubject(),
@@ -311,28 +316,6 @@ public class PatentUtils {
      */
     private LockableMGraph getContentGraph() {
         return contentGraphProvider.getContentGraph();
-    }
-
-    private Set<GraphNode> getAllPatents() {
-        Set<GraphNode> result = new HashSet<GraphNode>();
-        LockableMGraph contentGraph = getContentGraph();
-        Lock l = contentGraph.getLock().readLock();
-        l.lock();
-        try {
-            UriRef patentPublication = new UriRef(
-                    "http://www.patexpert.org/ontologies/pmo.owl#PatentPublication");
-            Iterator<Triple> ipatent = contentGraph.filter(null, RDF.type,
-                    patentPublication);
-            while (ipatent.hasNext()) {
-                Triple patentTriple = ipatent.next();
-                GraphNode patentNode = new GraphNode(patentTriple.getSubject(),
-                        contentGraph);
-                result.add(patentNode);
-            }
-        } finally {
-            l.unlock();
-        }
-        return result;
     }
 
     /*
