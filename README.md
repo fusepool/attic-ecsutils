@@ -37,7 +37,7 @@ Upload RDF data via HTTP GET. The service sends back the same message as for the
 
 Smush triple. When the smushing is completed the service sends back the message: "Smushing completed"   
 
-    curl -u user:password -X POST -H "Content-Type: text/turtle" -T applicant_test.nt http://platform.fusepool.info/ecsutils/smush
+    curl -u user:password -X POST -H "Content-Type: text/turtle" -T <owlsameas_statements_file> http://platform.fusepool.info/ecsutils/smush
 
 
 Patent service component
