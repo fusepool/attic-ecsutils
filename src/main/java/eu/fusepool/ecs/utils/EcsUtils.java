@@ -169,6 +169,7 @@ public class EcsUtils {
     public String loadFromStream(@Context final UriInfo uriInfo,
             @HeaderParam("Content-Type") final String mediaType,
             final InputStream data) throws Exception {
+    	
         AccessController.checkPermission(new AllPermission());
         // final MGraph addition = new SimpleMGraph();
         parser.parse(getContentGraph(), data, mediaType);
