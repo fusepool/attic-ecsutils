@@ -57,27 +57,27 @@
         <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.commons.web.base</artifactId>
-            <version>0.12.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.entityhub.model.clerezza</artifactId>
-            <version>0.10.0-incubating</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.commons.web.viewable</artifactId>
-            <version>0.12.0-SNAPSHOT</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.entityhub.core</artifactId>
-            <version>0.11.0</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
             <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.entityhub.servicesapi</artifactId>
-            <version>0.11.0</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -87,12 +87,12 @@
         <dependency>
             <groupId>org.apache.clerezza</groupId>
             <artifactId>rdf.ontologies</artifactId>
-            <version>0.11-incubating</version>
+            <version>0.12-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.clerezza</groupId>
             <artifactId>rdf.utils</artifactId>
-            <version>0.13-incubating</version>
+            <version>0.14-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.clerezza</groupId>
@@ -112,7 +112,7 @@
         <dependency>
             <groupId>org.apache.stanbol</groupId>
             <artifactId>org.apache.stanbol.enhancer.core</artifactId>
-            <version>0.10.0</version>
+            <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>eu.fusepool</groupId>
