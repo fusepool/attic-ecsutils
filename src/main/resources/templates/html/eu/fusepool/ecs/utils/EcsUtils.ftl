@@ -1,7 +1,7 @@
 <@namespace ont="http://example.org/service-description#" />
 <@namespace ehub="http://stanbol.apache.org/ontology/entityhub/entityhub#" />
 <@namespace cc="http://creativecommons.org/ns#" />
-<@namespace dct="http://purl.org/dc/terms/" />
+<@namespace dcterms="http://purl.org/dc/terms/" />
 
 <html>
   <head>
