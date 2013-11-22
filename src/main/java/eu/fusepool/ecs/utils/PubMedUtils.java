@@ -135,7 +135,7 @@ public class PubMedUtils {
     }
     
     /**
-     * Filter all pmo:PatentPublication that do not have a sioc:content property then for each of these resources does the following
+     * Filter all bibo:Document that do not have a sioc:content property then for each of these resources does the following
      * 1) create a text content from the dcterms:title and dcterms:abstract properties
      * 2) add a new sioc:content property to the resource with the created text content
      * 3) create a content item with the same resource's uri using the text content and send this content item to a default chain for enhancements
