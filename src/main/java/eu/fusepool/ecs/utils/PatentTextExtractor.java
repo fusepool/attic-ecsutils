@@ -1,20 +1,28 @@
 package eu.fusepool.ecs.utils;
 
+import java.security.AccessController;
+import java.security.AllPermission;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
 
 import org.apache.clerezza.rdf.core.Literal;
 import org.apache.clerezza.rdf.core.MGraph;
 import org.apache.clerezza.rdf.core.Resource;
 import org.apache.clerezza.rdf.core.Triple;
 import org.apache.clerezza.rdf.core.UriRef;
+import org.apache.clerezza.rdf.core.access.LockableMGraph;
+import org.apache.clerezza.rdf.core.impl.PlainLiteralImpl;
+import org.apache.clerezza.rdf.core.impl.TripleImpl;
 import org.apache.clerezza.rdf.ontologies.DCTERMS;
 import org.apache.clerezza.rdf.ontologies.RDF;
+import org.apache.clerezza.rdf.ontologies.RDFS;
 import org.apache.clerezza.rdf.ontologies.SIOC;
 import org.apache.clerezza.rdf.utils.GraphNode;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.ConfigurationPolicy;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Properties;
 import org.apache.felix.scr.annotations.Property;
@@ -32,15 +40,22 @@ import eu.fusepool.ecs.ontologies.ECS;
  * The extracted text is added as a value of the sioc.content property to the same individuals. 
  * The text can be used for indexing purposes.
  */
-@Component(immediate = true)
+@Component(immediate = true, metatype = true,  
+	configurationFactory = true, policy = ConfigurationPolicy.OPTIONAL)
 @Service(RdfDigester.class)
 @Properties(value = {
 	    @Property(name = Constants.SERVICE_RANKING, 
-	    		intValue = PatentTextExtractor.DEFAULT_SERVICE_RANKING)
+	    		intValue = PatentTextExtractor.DEFAULT_SERVICE_RANKING),
+	    @Property(name = PatentTextExtractor.EXTRACTOR_TYPE_LABEL, 
+	    		value = PatentTextExtractor.EXTRACTOR_TYPE_VALUE)
 })
 public class PatentTextExtractor implements RdfDigester {
 	
-public static final int DEFAULT_SERVICE_RANKING = 101;
+	public static final int DEFAULT_SERVICE_RANKING = 101;
+	
+	public static final String EXTRACTOR_TYPE_LABEL = "extractorType";
+	
+	public static final String EXTRACTOR_TYPE_VALUE = "patent";
 	
 	private static Logger log = LoggerFactory.getLogger(PatentTextExtractor.class);
 	
@@ -68,7 +83,7 @@ public static final int DEFAULT_SERVICE_RANKING = 101;
      */
     private Set<UriRef> getPatents(MGraph graph) {
     	Set<UriRef> result = new HashSet<UriRef>();
-        
+    	
         Iterator<Triple> idocument = graph.filter(null, RDF.type, PatentOntology.PatentPublication);
         while (idocument.hasNext()) {
             Triple triple = idocument.next();
@@ -91,6 +106,8 @@ public static final int DEFAULT_SERVICE_RANKING = 101;
 
     private void addPropertyToNode(MGraph graph, UriRef patentRef) {
     
+    	AccessController.checkPermission(new AllPermission());
+    	
     	String textContent = "";
     	
     	GraphNode node = new GraphNode(patentRef, graph);
@@ -106,12 +123,20 @@ public static final int DEFAULT_SERVICE_RANKING = 101;
         	String _abstract = abstracts.next().getLexicalForm() + "\n";
             textContent += _abstract;
         }
+        
         if(!"".equals(textContent)) {
-        	node.addPropertyValue(SIOC.content, textContent);
+        	
+        	graph.add(new TripleImpl(patentRef, SIOC.content, new PlainLiteralImpl(textContent)));
+        	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException  
+        	//node.addPropertyValue(SIOC.content, new PlainLiteralImpl("prova della disperazione"));
         	
         	// Resources with this type have sioc:content and rdfs:label indexed by the ECS 
         	// when added to the content graph
-            node.addProperty(RDF.type, ECS.ContentItem);
+        	graph.add(new TripleImpl(patentRef, RDF.type, ECS.ContentItem));
+        	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException 
+            //node.addProperty(RDF.type, ECS.ContentItem);
+        	
+        	log.info("Added sioc:content property to patent " + patentRef.getUnicodeString() + " value:  " + textContent);
         }
         else {
         	log.info("No text found in dcterms:title or dcterms:abstract to add to sioc:content");
