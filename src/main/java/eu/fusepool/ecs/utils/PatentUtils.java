@@ -121,13 +121,13 @@ public class PatentUtils {
      */
     @Activate
     protected void activate(ComponentContext context) {
-        log.info("The example service is being activated");
+        log.info("The PatentUtils service is being activated");
 
     }
 
     @Deactivate
     protected void deactivate(ComponentContext context) {
-        log.info("The example service is being deactivated");
+        log.info("The PatentUtils service is being deactivated");
     }
     
     /**
