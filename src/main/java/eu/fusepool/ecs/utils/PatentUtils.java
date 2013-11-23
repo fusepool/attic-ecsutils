@@ -249,16 +249,12 @@ public class PatentUtils {
         addSubjects(resourceNode, enhancementGraph);
     }
 
-    /* 
-     * Add dc:subject property to a pmo:PatentPublication with entities extracted by engines in the default chain
-     * 
-     */
-    /**
-     * Given a node and a TripleCollection containing fise:Enhancements about
-     * this node this method adds dc:subject properties to node pointing to
-     * entities referenced by those enhancements if the enhancement confidence
-     * value is above a threshold.
-     *
+    /** 
+     * Add dc:subject property to an individual of type pmo:PatentPublication pointing to entities 
+     * extracted by NLP engines in the default chain. Given a node (patent) and a TripleCollection 
+     * containing fise:Enhancements about that patent dc:subject properties are added to it pointing 
+     * to entities referenced by those enhancements if the enhancement confidence value is above a 
+     * threshold.
      * @param node
      * @param metadata
      */
