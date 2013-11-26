@@ -104,24 +104,37 @@ public class PatentTextExtractor implements RdfDigester {
 	 * @throws IOException 
 	 */
 	public void extractText(MGraph graph) {
-		
-		// select all the resources that are bibo:Document and do not have a sioc:content property 
+		String text = "";
+		// select all the resources that are pmo:PatentPubblication and do not have a sioc:content property 
 		Set<UriRef> patentRefs = getPatents(graph);
 		for (UriRef patentRef : patentRefs) {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
-            String text = addSiocContentToPatent(graph, patentRef);
+            //text = addSiocContentToPatent(graph, patentRef);
             
-            //send the text to the default chain for enhancements
-            try {
-				enhance(text, patentRef, graph);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (EnhancementException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+            text = "Machine for manufacturing wood for apartment The invention relates to an apparatus (1) +" +
+            		" for manufacturing green bricks from clay for the brick manufacturing industry, comprising " +
+            		"a circulating conveyor (3) carrying mould containers combined to mould container parts (4), " +
+            		"a reservoir (5) for clay arranged above the mould containers, means for carrying clay out " +
+            		"of the reservoir (5) into the mould containers, means (9) for pressing and trimming clay " +
+            		"in the mould containers, means (11) for supplying and placing take-off plates for the green " +
+            		"bricks (13) and means for discharging green bricks released from the mould containers, " +
+            		"characterized in that the apparatus further comprises means (22) for moving the mould " +
+            		"container parts (4) filled with green bricks such that a protruding edge is formed on at " +
+            		"least one side of the green bricks. ";
+            
+            //send the text to the default chain for enhancements if not empty
+            if(! "".equals(text) && text != null ) {
+	            try {
+					enhance(text, patentRef, graph);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (EnhancementException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+            }
             
             //add a dc:subject statement to each applicant
             aliasAsDcSubject(patentRef, PatentOntology.applicant);
@@ -133,8 +146,7 @@ public class PatentTextExtractor implements RdfDigester {
 	
 	/**
      * Select all resources of type pmo:patentPublication that do not have a sioc:content 
-     * property and have at least one of
-     * dcterms:title, dcterms:abstract
+     * property and have at least one of dcterms:title, dcterms:abstract
      */
     private Set<UriRef> getPatents(MGraph graph) {
     	Set<UriRef> result = new HashSet<UriRef>();
@@ -145,7 +157,9 @@ public class PatentTextExtractor implements RdfDigester {
             UriRef patentRef = (UriRef) triple.getSubject();
             GraphNode node = new GraphNode(patentRef, graph);
             if (!node.getObjects(SIOC.content).hasNext()) {
-                result.add(patentRef);
+            	if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
+            		result.add(patentRef);
+            	}
             }
         }
         
