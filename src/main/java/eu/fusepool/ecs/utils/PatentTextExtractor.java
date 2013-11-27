@@ -111,17 +111,7 @@ public class PatentTextExtractor implements RdfDigester {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
             //text = addSiocContentToPatent(graph, patentRef);
-            
-            text = "Machine for manufacturing wood for apartment The invention relates to an apparatus (1) +" +
-            		" for manufacturing green bricks from clay for the brick manufacturing industry, comprising " +
-            		"a circulating conveyor (3) carrying mould containers combined to mould container parts (4), " +
-            		"a reservoir (5) for clay arranged above the mould containers, means for carrying clay out " +
-            		"of the reservoir (5) into the mould containers, means (9) for pressing and trimming clay " +
-            		"in the mould containers, means (11) for supplying and placing take-off plates for the green " +
-            		"bricks (13) and means for discharging green bricks released from the mould containers, " +
-            		"characterized in that the apparatus further comprises means (22) for moving the mould " +
-            		"container parts (4) filled with green bricks such that a protruding edge is formed on at " +
-            		"least one side of the green bricks. ";
+            text = "Barack Obama is the president of the United States";
             
             //send the text to the default chain for enhancements if not empty
             if(! "".equals(text) && text != null ) {
@@ -136,10 +126,10 @@ public class PatentTextExtractor implements RdfDigester {
 				}
             }
             
-            //add a dc:subject statement to each applicant
-            aliasAsDcSubject(patentRef, PatentOntology.applicant);
-            //add a dc:subject statement to each inventor
-            aliasAsDcSubject(patentRef, PatentOntology.inventor);
+            //add a dc:subject statement for each individual that is the object of the predicate pmo:applicant
+            aliasAsDcSubject(patentRef, PatentOntology.applicant, (LockableMGraph) graph);
+            //add a dc:subject statement for each individual that is the object of the predicate pmo:inventor
+            aliasAsDcSubject(patentRef, PatentOntology.inventor, (LockableMGraph) graph);
         }
 		
 	}
@@ -156,11 +146,12 @@ public class PatentTextExtractor implements RdfDigester {
             Triple triple = idocument.next();
             UriRef patentRef = (UriRef) triple.getSubject();
             GraphNode node = new GraphNode(patentRef, graph);
-            if (!node.getObjects(SIOC.content).hasNext()) {
-            	if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
+            //uncomment the following 4 commented lines after debugging
+            //if (!node.getObjects(SIOC.content).hasNext()) {
+            	//if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
             		result.add(patentRef);
-            	}
-            }
+            	//}
+            //}
         }
         
         log.info(result.size() + " Document nodes found.");
@@ -235,7 +226,7 @@ public class PatentTextExtractor implements RdfDigester {
     }
     
     /** 
-     * Add dc:subject property to an individual of type pmo:PatentPublication pointing to entities 
+     * Add dc:subject property to patent (pmo:PatentPublication) pointing to entities 
      * extracted by NLP engines in the default chain. Given a node (patent) and a TripleCollection 
      * containing fise:Enhancements about that patent dc:subject properties are added to it pointing 
      * to entities referenced by those enhancements if the enhancement confidence value is above a 
@@ -244,24 +235,21 @@ public class PatentTextExtractor implements RdfDigester {
      * @param metadata
      */
     private void addSubjects(UriRef patentRef, TripleCollection metadata, MGraph graph) {
-        final GraphNode enhancementType = new GraphNode(
-                TechnicalClasses.ENHANCER_ENHANCEMENT, metadata);
+        final GraphNode enhancementType = new GraphNode(TechnicalClasses.ENHANCER_ENHANCEMENT, metadata);
         final Set<UriRef> entities = new HashSet<UriRef>();
-        final Iterator<GraphNode> enhancements = enhancementType
-                .getSubjectNodes(RDF.type);
+        // get all the enhancements
+        final Iterator<GraphNode> enhancements = enhancementType.getSubjectNodes(RDF.type);
         while (enhancements.hasNext()) {
             final GraphNode enhhancement = enhancements.next();
-            // Add dc:subject to the patent publication for each referenced entity
-            final Iterator<Resource> referencedEntities = enhhancement.getObjects(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_ENTITY_REFERENCE);
-            while (referencedEntities.hasNext()) {
-                final UriRef entity = (UriRef) referencedEntities.next();
-                GraphNode entityNode = new GraphNode(entity, metadata);
-                Iterator<Literal> confidenceLevels = entityNode.getLiterals(TechnicalClasses.FNHANCER_CONFIDENCE_LEVEL);
-                if (!confidenceLevels.hasNext()) {
-                    continue;
-                }
-                double confidenceLevel = LiteralFactory.getInstance().createObject(Double.class, (TypedLiteral) confidenceLevels.next());
-                if (confidenceLevel >= CONFIDENCE_THRESHOLD) {
+          //look the confidence value for each enhancement
+            double enhancementConfidence = LiteralFactory.getInstance().createObject(Double.class,
+            		(TypedLiteral) enhhancement.getLiterals(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_CONFIDENCE).next());
+            if( enhancementConfidence >= CONFIDENCE_THRESHOLD ) {            
+            	// get entities referenced in the enhancement 
+            	final Iterator<Resource> referencedEntities = enhhancement.getObjects(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_ENTITY_REFERENCE);
+            	while (referencedEntities.hasNext()) {
+	                final UriRef entity = (UriRef) referencedEntities.next();	                
+	                // Add dc:subject to the patent for each referenced entity
                 	graph.add(new TripleImpl(patentRef, DC.subject, entity));
                     entities.add(entity);
                 }
@@ -277,28 +265,25 @@ public class PatentTextExtractor implements RdfDigester {
     }
     
     /**
-     * Add a dc:subject statement to a patent resource for each entity that is linked 
+     * Add a dc:subject statement to a patent for each entity that is linked 
      * to that resource through the predicate passed as argument..  
      */
-    private void aliasAsDcSubject(UriRef patentRef, UriRef resourcePredicate) {
-    	/*
-        Set<Resource> objectSet = new HashSet<Resource>();
-        Lock lock = resourceNode.readLock();
-        lock.lock();
-        try {
-            final Iterator<Resource> relatedResources = resourceNode
-                    .getObjects(resourcePredicate);
-            while (relatedResources.hasNext()) {
-                Resource resource = relatedResources.next();
-                objectSet.add(resource);
+    private void aliasAsDcSubject(UriRef patentRef, UriRef predicateRef, LockableMGraph graph) {
+    	final GraphNode patentNode = new GraphNode(patentRef, graph);
+    	Lock lock = graph.getLock().writeLock();
+    	lock.lock();
+    	try {
+    		Iterator<Resource> iobjects = patentNode.getObjects(predicateRef);
+            while (iobjects.hasNext()) {
+                Resource entity = iobjects.next();                             
+                // Add dc:subject to the patent publication for each entity related to it via the predicate
+            	graph.add(new TripleImpl(patentRef, DC.subject, entity));
             }
-        } finally {
-            lock.unlock();
+        } 
+    	finally {
+           lock.unlock();
         }
-        for (Resource applicant : objectSet) {
-            resourceNode.addProperty(DC.subject, applicant);
-        }
-        */
+        
     }
     
     /** 
