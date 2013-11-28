@@ -18,6 +18,7 @@ import org.apache.clerezza.rdf.core.TypedLiteral;
 import org.apache.clerezza.rdf.core.UriRef;
 import org.apache.clerezza.rdf.core.access.LockableMGraph;
 import org.apache.clerezza.rdf.core.impl.PlainLiteralImpl;
+import org.apache.clerezza.rdf.core.impl.SimpleMGraph;
 import org.apache.clerezza.rdf.core.impl.TripleImpl;
 import org.apache.clerezza.rdf.ontologies.DC;
 import org.apache.clerezza.rdf.ontologies.DCTERMS;
@@ -127,9 +128,9 @@ public class PatentTextExtractor implements RdfDigester {
             }
             
             //add a dc:subject statement for each individual that is the object of the predicate pmo:applicant
-            aliasAsDcSubject(patentRef, PatentOntology.applicant, (LockableMGraph) graph);
+            aliasAsDcSubject(patentRef, PatentOntology.applicant, graph);
             //add a dc:subject statement for each individual that is the object of the predicate pmo:inventor
-            aliasAsDcSubject(patentRef, PatentOntology.inventor, (LockableMGraph) graph);
+            aliasAsDcSubject(patentRef, PatentOntology.inventor, graph);
         }
 		
 	}
@@ -268,21 +269,26 @@ public class PatentTextExtractor implements RdfDigester {
      * Add a dc:subject statement to a patent for each entity that is linked 
      * to that resource through the predicate passed as argument..  
      */
-    private void aliasAsDcSubject(UriRef patentRef, UriRef predicateRef, LockableMGraph graph) {
+    private void aliasAsDcSubject(UriRef patentRef, UriRef predicateRef, MGraph graph) {
+    	MGraph resultGraph = new SimpleMGraph();
     	final GraphNode patentNode = new GraphNode(patentRef, graph);
-    	Lock lock = graph.getLock().writeLock();
+    	Lock lock = patentNode.readLock();
     	lock.lock();
     	try {
     		Iterator<Resource> iobjects = patentNode.getObjects(predicateRef);
             while (iobjects.hasNext()) {
                 Resource entity = iobjects.next();                             
                 // Add dc:subject to the patent publication for each entity related to it via the predicate
-            	graph.add(new TripleImpl(patentRef, DC.subject, entity));
+                resultGraph.add(new TripleImpl(patentRef, DC.subject, entity));
             }
         } 
     	finally {
            lock.unlock();
         }
+    	
+    	if(!resultGraph.isEmpty()) {
+    		graph.addAll(resultGraph);
+    	}
         
     }
     
