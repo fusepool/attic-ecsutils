@@ -98,8 +98,7 @@ public class PatentTextExtractor implements RdfDigester {
 	
 	/**
 	 * Looks for sioc:content property in the input document graph in individual of type pmo:PatentPublication.
-	 * If there's no such property it adds it. 
-	 * The value of the property is taken from the following properties:
+	 * If there's no such property it adds it. The value of the property is taken from the following properties:
 	 * dcterms:title, dcterms:abstract 
 	 * @throws  
 	 * @throws IOException 
@@ -107,10 +106,11 @@ public class PatentTextExtractor implements RdfDigester {
 	public void extractText(MGraph graph) {
 		String text = "";
 		// select all the resources that are pmo:PatentPubblication and do not have a sioc:content property 
-		Set<UriRef> patentRefs = getPatents(graph);
+		Set<UriRef> patentRefs = getPatents( (LockableMGraph) graph );
 		for (UriRef patentRef : patentRefs) {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
+			// extract text from properties and add it to the patent with a sioc:content property
             //text = addSiocContentToPatent(graph, patentRef);
             text = "Barack Obama is the president of the United States";
             
@@ -139,21 +139,28 @@ public class PatentTextExtractor implements RdfDigester {
      * Select all resources of type pmo:patentPublication that do not have a sioc:content 
      * property and have at least one of dcterms:title, dcterms:abstract
      */
-    private Set<UriRef> getPatents(MGraph graph) {
+    private Set<UriRef> getPatents(LockableMGraph graph) {
     	Set<UriRef> result = new HashSet<UriRef>();
     	
-        Iterator<Triple> idocument = graph.filter(null, RDF.type, PatentOntology.PatentPublication);
-        while (idocument.hasNext()) {
-            Triple triple = idocument.next();
-            UriRef patentRef = (UriRef) triple.getSubject();
-            GraphNode node = new GraphNode(patentRef, graph);
-            //uncomment the following 4 commented lines after debugging
-            //if (!node.getObjects(SIOC.content).hasNext()) {
-            	//if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
-            		result.add(patentRef);
-            	//}
-            //}
-        }
+    	Lock lock = graph.getLock().readLock();
+    	lock.lock();
+    	try {
+	        Iterator<Triple> idocument = graph.filter(null, RDF.type, PatentOntology.PatentPublication);
+	        while (idocument.hasNext()) {
+	            Triple triple = idocument.next();
+	            UriRef patentRef = (UriRef) triple.getSubject();
+	            GraphNode node = new GraphNode(patentRef, graph);
+	            //uncomment the following 4 commented lines after debugging
+	            //if (!node.getObjects(SIOC.content).hasNext()) {
+	            	//if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
+	            		result.add(patentRef);
+	            	//}
+	            //}
+	        }
+    	}
+    	finally {
+    		lock.unlock();
+    	}
         
         log.info(result.size() + " Document nodes found.");
         
