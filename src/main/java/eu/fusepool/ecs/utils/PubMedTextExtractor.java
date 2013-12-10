@@ -24,6 +24,7 @@ import org.apache.clerezza.rdf.core.impl.TripleImpl;
 import org.apache.clerezza.rdf.ontologies.DC;
 import org.apache.clerezza.rdf.ontologies.DCTERMS;
 import org.apache.clerezza.rdf.ontologies.RDF;
+import org.apache.clerezza.rdf.ontologies.RDFS;
 import org.apache.clerezza.rdf.ontologies.SIOC;
 import org.apache.clerezza.rdf.utils.GraphNode;
 import org.apache.felix.scr.annotations.Activate;
@@ -131,7 +132,7 @@ public class PubMedTextExtractor implements RdfDigester {
 	/**
      * Add dc:subject properties to a node (article) pointing to entities which are assumed to be related to
      * a content. This method uses the enhancementJobManager to extract related entities using NLP 
-     * processor available in the default chain. The node uri is also the uri of the content item
+     * engines available in the default chain. The node uri (article) is also the uri of the content item
      * so that the enhancements will be referred that node. Each enhancement found with a confidence 
      * value above a threshold is then added as a dc:subject to the node
      */
@@ -234,7 +235,7 @@ public class PubMedTextExtractor implements RdfDigester {
      * extracted by NLP engines in the default chain. Given a node (article) and a TripleCollection 
      * containing fise:Enhancements about that article dc:subject properties are added to it pointing 
      * to entities referenced by those enhancements if the enhancement confidence value is above a 
-     * threshold.
+     * threshold. A rdfs:label is also added to the subject entity if available in the enhancement metadata. 
      * @param node
      * @param metadata
      */
@@ -250,12 +251,21 @@ public class PubMedTextExtractor implements RdfDigester {
             		(TypedLiteral) enhhancement.getLiterals(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_CONFIDENCE).next());
             if( enhancementConfidence >= CONFIDENCE_THRESHOLD ) {            
             	// get entities referenced in the enhancement 
-            	final Iterator<Resource> referencedEntities = enhhancement.getObjects(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_ENTITY_REFERENCE);
+            	final Iterator<GraphNode> referencedEntities = enhhancement.getObjectNodes(org.apache.stanbol.enhancer.servicesapi.rdf.Properties.ENHANCER_ENTITY_REFERENCE);
             	while (referencedEntities.hasNext()) {
-	                final UriRef entity = (UriRef) referencedEntities.next();	                
+	                final GraphNode entityNode = referencedEntities.next();
+	                UriRef entityRef = (UriRef) entityNode.getNode();
 	                // Add dc:subject to the patent for each referenced entity
-                	graph.add(new TripleImpl(articleRef, DC.subject, entity));
-                    entities.add(entity);
+                	graph.add(new TripleImpl(articleRef, DC.subject, entityRef));
+                	// add a rdfs:label to the entity if available in the content item metadata
+                	Iterator<Literal> ilabels = entityNode.getLiterals(RDFS.label);
+                	while(ilabels.hasNext()){
+                		String label = ilabels.next().getLexicalForm();
+                		graph.add(new TripleImpl(entityRef, RDFS.label, new PlainLiteralImpl(label)));
+                	}
+                	
+                	entities.add( entityRef );
+                    
                 }
             }
 
