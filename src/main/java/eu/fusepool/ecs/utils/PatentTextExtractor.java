@@ -111,8 +111,8 @@ public class PatentTextExtractor implements RdfDigester {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
 			// extract text from properties and add it to the patent with a sioc:content property
-            //text = addSiocContentToPatent(graph, patentRef);
-            text = "Barack Obama is the president of the United States";
+            text = addSiocContentToPatent(graph, patentRef);
+            //text = "Barack Obama is the president of the United States";
             
             //send the text to the default chain for enhancements if not empty
             if(! "".equals(text) && text != null ) {
@@ -151,11 +151,11 @@ public class PatentTextExtractor implements RdfDigester {
 	            UriRef patentRef = (UriRef) triple.getSubject();
 	            GraphNode node = new GraphNode(patentRef, graph);
 	            //uncomment the following 4 commented lines after debugging
-	            //if (!node.getObjects(SIOC.content).hasNext()) {
-	            	//if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
+	            if (!node.getObjects(SIOC.content).hasNext()) {
+	            	if(node.getObjects(DCTERMS.abstract_).hasNext() || node.getObjects(DCTERMS.title).hasNext()){
 	            		result.add(patentRef);
-	            	//}
-	            //}
+	            	}
+	            }
 	        }
     	}
     	finally {
