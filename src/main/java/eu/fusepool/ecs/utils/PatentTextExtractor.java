@@ -111,7 +111,7 @@ public class PatentTextExtractor implements RdfDigester {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
 			// extract text from properties and add it to the patent with a sioc:content property
-            text = addSiocContentToPatent(graph, patentRef);
+            text = addSiocContentToPatent((LockableMGraph)graph, patentRef);
             //text = "Barack Obama is the president of the United States";
             
             //send the text to the default chain for enhancements if not empty
@@ -172,7 +172,7 @@ public class PatentTextExtractor implements RdfDigester {
      * The value is taken from dcterm:title and dcterms:abstract properties 
      */
 
-    private String addSiocContentToPatent(MGraph graph, UriRef patentRef) {
+    private String addSiocContentToPatent(LockableMGraph graph, UriRef patentRef) {
     
     	AccessController.checkPermission(new AllPermission());
     	
@@ -180,10 +180,17 @@ public class PatentTextExtractor implements RdfDigester {
     	
     	GraphNode node = new GraphNode(patentRef, graph);
     	
-        Iterator<Literal> titles = node.getLiterals(DCTERMS.title);
-        while (titles.hasNext()) {
-        	String title = titles.next().getLexicalForm() + "\n";
-            textContent += title;
+    	Lock rl = graph.getLock().readLock();
+        rl.lock();
+        try {
+	        Iterator<Literal> titles = node.getLiterals(DCTERMS.title);
+	        while (titles.hasNext()) {
+	        	String title = titles.next().getLexicalForm() + "\n";
+	            textContent += title;
+	        }
+        }
+        finally {
+        	rl.unlock();
         }
         
         Iterator<Literal> abstracts = node.getLiterals(DCTERMS.abstract_);
