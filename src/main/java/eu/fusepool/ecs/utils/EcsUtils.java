@@ -182,6 +182,23 @@ public class EcsUtils {
     }
     
     /**
+     * Remove all triples from content graph
+     */
+    @POST
+    @Path("cgremoveall")
+    @Produces("text/plain")
+    public String removeAllTriplesFromCG(@Context final UriInfo uriInfo) throws Exception {
+    	
+        AccessController.checkPermission(new AllPermission());
+        
+        int numTriples = getContentGraph().size();
+        
+        getContentGraph().clear();
+        
+        return "The content graph is empty. All " + numTriples + " have been removed.";
+    }
+    
+    /**
      * Select a (random) target uri from a set of equivalent uris and replace those aliases with it in all the triples in the content graph
      *  in which these aliases are subjects or objects.
      * @param sameAsTriples
