@@ -188,15 +188,15 @@ public class PatentTextExtractor implements RdfDigester {
 	        	String title = titles.next().getLexicalForm() + "\n";
 	            textContent += title;
 	        }
+        
+	        Iterator<Literal> abstracts = node.getLiterals(DCTERMS.abstract_);
+	        while (abstracts.hasNext()) {
+	        	String _abstract = abstracts.next().getLexicalForm() + "\n";
+	            textContent += _abstract;
+	        }
         }
         finally {
         	rl.unlock();
-        }
-        
-        Iterator<Literal> abstracts = node.getLiterals(DCTERMS.abstract_);
-        while (abstracts.hasNext()) {
-        	String _abstract = abstracts.next().getLexicalForm() + "\n";
-            textContent += _abstract;
         }
         
         if(!"".equals(textContent)) {
