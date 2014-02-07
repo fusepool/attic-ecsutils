@@ -68,17 +68,17 @@ configurationFactory = true, policy = ConfigurationPolicy.OPTIONAL)
 @Properties(value = {
 	    @Property(name = Constants.SERVICE_RANKING, 
 	    		intValue = PubMedTextExtractor.DEFAULT_SERVICE_RANKING),
-	    @Property(name = PubMedTextExtractor.EXTRACTOR_TYPE_LABEL, 
-	    		value = PubMedTextExtractor.EXTRACTOR_TYPE_VALUE)
+	    @Property(name = PubMedTextExtractor.DIGESTER_TYPE_LABEL, 
+	    		value = PubMedTextExtractor.DIGESTER_TYPE_VALUE)
 })
 
 public class PubMedTextExtractor implements RdfDigester {
 	
 	public static final int DEFAULT_SERVICE_RANKING = 101;
 	
-    public static final String EXTRACTOR_TYPE_LABEL = "extractorType";
+    public static final String DIGESTER_TYPE_LABEL = "digesterImpl";
 	
-	public static final String EXTRACTOR_TYPE_VALUE = "pubmed";
+	public static final String DIGESTER_TYPE_VALUE = "pubmed";
 	
 	//Confidence threshold value to accept entities extracted by an NLP enhancement engine
     private static final double CONFIDENCE_THRESHOLD = 0.3;
@@ -211,16 +211,13 @@ public class PubMedTextExtractor implements RdfDigester {
         if(!"".equals(textContent)) {
         	
         	graph.add(new TripleImpl(articleRef, SIOC.content, new PlainLiteralImpl(textContent)));
-        	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException  
-        	//node.addPropertyValue(SIOC.content, new PlainLiteralImpl("prova della disperazione"));
-        	
+        	        	
         	// Resources with this type have sioc:content and rdfs:label indexed by the ECS 
         	// when added to the content graph
         	graph.add(new TripleImpl(articleRef, RDF.type, ECS.ContentItem));
-        	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException 
-            //node.addProperty(RDF.type, ECS.ContentItem);
         	
-        	log.info("Added sioc:content property to patent " + articleRef.getUnicodeString() + " value:  " + textContent);
+        	
+        	log.info("Added sioc:content property to patent " + articleRef.getUnicodeString());
         }
         else {
         	log.info("No text found in dcterms:title or dcterms:abstract to add to sioc:content");
