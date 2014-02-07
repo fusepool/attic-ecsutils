@@ -68,16 +68,16 @@ import eu.fusepool.ecs.ontologies.ECS;
 @Properties(value = {
 	    @Property(name = Constants.SERVICE_RANKING, 
 	    		intValue = PatentTextExtractor.DEFAULT_SERVICE_RANKING),
-	    @Property(name = PatentTextExtractor.EXTRACTOR_TYPE_LABEL, 
-	    		value = PatentTextExtractor.EXTRACTOR_TYPE_VALUE)
+	    @Property(name = PatentTextExtractor.DIGESTER_TYPE_LABEL, 
+	    		value = PatentTextExtractor.DIGESTER_TYPE_VALUE)
 })
 public class PatentTextExtractor implements RdfDigester {
 	
 	public static final int DEFAULT_SERVICE_RANKING = 101;
 	
-	public static final String EXTRACTOR_TYPE_LABEL = "extractorType";
+	public static final String DIGESTER_TYPE_LABEL = "digesterImpl";
 	
-	public static final String EXTRACTOR_TYPE_VALUE = "patent";
+	public static final String DIGESTER_TYPE_VALUE = "patent";
 	
 	//Confidence threshold value to accept entities extracted by an NLP enhancement engine
     private static final double CONFIDENCE_THRESHOLD = 0.3;
@@ -112,7 +112,7 @@ public class PatentTextExtractor implements RdfDigester {
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
 			// extract text from properties and add it to the patent with a sioc:content property
             text = addSiocContentToPatent((LockableMGraph)graph, patentRef);
-            //text = "Barack Obama is the president of the United States";
+            
             
             //send the text to the default chain for enhancements if not empty
             if(! "".equals(text) && text != null ) {
@@ -202,8 +202,6 @@ public class PatentTextExtractor implements RdfDigester {
         if(!"".equals(textContent)) {
         	
         	graph.add(new TripleImpl(patentRef, SIOC.content, new PlainLiteralImpl(textContent)));
-        	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException  
-        	//node.addPropertyValue(SIOC.content, new PlainLiteralImpl("prova della disperazione"));
         	
         	// Resources with this type have sioc:content and rdfs:label indexed by the ECS 
         	// when added to the content graph
@@ -211,7 +209,7 @@ public class PatentTextExtractor implements RdfDigester {
         	// The following call to the node raise a org.apache.clerezza.rdf.core.NoConvertorException 
             //node.addProperty(RDF.type, ECS.ContentItem);
         	
-        	log.info("Added sioc:content property to patent " + patentRef.getUnicodeString() + " value:  " + textContent);
+        	log.info("Added sioc:content property to patent " + patentRef.getUnicodeString());
         }
         else {
         	log.info("No text found in dcterms:title or dcterms:abstract to add to sioc:content");
