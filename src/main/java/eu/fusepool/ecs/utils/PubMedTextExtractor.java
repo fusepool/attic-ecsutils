@@ -67,18 +67,16 @@ configurationFactory = true, policy = ConfigurationPolicy.OPTIONAL)
 @Service(RdfDigester.class)
 @Properties(value = {
 	    @Property(name = Constants.SERVICE_RANKING, 
-	    		intValue = PubMedTextExtractor.DEFAULT_SERVICE_RANKING),
-	    @Property(name = PubMedTextExtractor.DIGESTER_TYPE_LABEL, 
-	    		value = PubMedTextExtractor.DIGESTER_TYPE_VALUE)
+	    		intValue = PubMedTextExtractor.DEFAULT_SERVICE_RANKING)
 })
 
 public class PubMedTextExtractor implements RdfDigester {
 	
 	public static final int DEFAULT_SERVICE_RANKING = 101;
 	
-    public static final String DIGESTER_TYPE_LABEL = "digesterImpl";
+    public final String DIGESTER_TYPE_LABEL = "digesterImpl";
 	
-	public static final String DIGESTER_TYPE_VALUE = "pubmed";
+	public final String DIGESTER_TYPE_VALUE = "pubmed";
 	
 	//Confidence threshold value to accept entities extracted by an NLP enhancement engine
     private static final double CONFIDENCE_THRESHOLD = 0.3;
@@ -294,6 +292,10 @@ public class PubMedTextExtractor implements RdfDigester {
         log.info("The PubMedTextExtractor service is being activated");
 
     }
+	
+	public String getName() {
+		return this.DIGESTER_TYPE_VALUE;
+	}
 
     @Deactivate
     protected void deactivate(ComponentContext context) {
