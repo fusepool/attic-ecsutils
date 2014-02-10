@@ -67,17 +67,15 @@ import eu.fusepool.ecs.ontologies.ECS;
 @Service(RdfDigester.class)
 @Properties(value = {
 	    @Property(name = Constants.SERVICE_RANKING, 
-	    		intValue = PatentTextExtractor.DEFAULT_SERVICE_RANKING),
-	    @Property(name = PatentTextExtractor.DIGESTER_TYPE_LABEL, 
-	    		value = PatentTextExtractor.DIGESTER_TYPE_VALUE)
+	    		intValue = PatentTextExtractor.DEFAULT_SERVICE_RANKING)
 })
 public class PatentTextExtractor implements RdfDigester {
 	
 	public static final int DEFAULT_SERVICE_RANKING = 101;
 	
-	public static final String DIGESTER_TYPE_LABEL = "digesterImpl";
+	public final String DIGESTER_TYPE_LABEL = "digesterImpl";
 	
-	public static final String DIGESTER_TYPE_VALUE = "patent";
+	public final String DIGESTER_TYPE_VALUE = "patent";
 	
 	//Confidence threshold value to accept entities extracted by an NLP enhancement engine
     private static final double CONFIDENCE_THRESHOLD = 0.3;
@@ -323,6 +321,10 @@ public class PatentTextExtractor implements RdfDigester {
         log.info("The PatentTextExtractor service is being activated");
 
     }
+	
+	public String getName() {
+		return this.DIGESTER_TYPE_VALUE;
+	}
 
     @Deactivate
     protected void deactivate(ComponentContext context) {
