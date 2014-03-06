@@ -104,12 +104,12 @@ public class PatentTextExtractor implements RdfDigester {
 	public void extractText(MGraph graph) {
 		String text = "";
 		// select all the resources that are pmo:PatentPubblication and do not have a sioc:content property 
-		Set<UriRef> patentRefs = getPatents( (LockableMGraph) graph );
+		Set<UriRef> patentRefs = getPatents( graph );
 		for (UriRef patentRef : patentRefs) {
             
 			log.info("Adding sioc:content property to patent: " + patentRef.getUnicodeString());
 			// extract text from properties and add it to the patent with a sioc:content property
-            text = addSiocContentToPatent((LockableMGraph)graph, patentRef);
+            text = addSiocContentToPatent(graph, patentRef);
             
             
             //send the text to the default chain for enhancements if not empty
@@ -137,11 +137,13 @@ public class PatentTextExtractor implements RdfDigester {
      * Select all resources of type pmo:patentPublication that do not have a sioc:content 
      * property and have at least one of dcterms:title, dcterms:abstract
      */
-    private Set<UriRef> getPatents(LockableMGraph graph) {
+    private Set<UriRef> getPatents(MGraph graph) {
     	Set<UriRef> result = new HashSet<UriRef>();
-    	
-    	Lock lock = graph.getLock().readLock();
-    	lock.lock();
+    	Lock lock = null;
+        if (graph instanceof LockableMGraph) {
+            lock = ((LockableMGraph)graph).getLock().readLock();
+            lock.lock();
+        }
     	try {
 	        Iterator<Triple> idocument = graph.filter(null, RDF.type, PatentOntology.PatentPublication);
 	        while (idocument.hasNext()) {
@@ -157,7 +159,9 @@ public class PatentTextExtractor implements RdfDigester {
 	        }
     	}
     	finally {
+            if (lock != null) {
     		lock.unlock();
+            }
     	}
         
         log.info(result.size() + " Document nodes found.");
@@ -170,7 +174,7 @@ public class PatentTextExtractor implements RdfDigester {
      * The value is taken from dcterm:title and dcterms:abstract properties 
      */
 
-    private String addSiocContentToPatent(LockableMGraph graph, UriRef patentRef) {
+    private String addSiocContentToPatent(MGraph graph, UriRef patentRef) {
     
     	AccessController.checkPermission(new AllPermission());
     	
@@ -178,8 +182,11 @@ public class PatentTextExtractor implements RdfDigester {
     	
     	GraphNode node = new GraphNode(patentRef, graph);
     	
-    	Lock rl = graph.getLock().readLock();
-        rl.lock();
+    	Lock lock = null;
+        if (graph instanceof LockableMGraph) {
+            lock = ((LockableMGraph)graph).getLock().readLock();
+            lock.lock();
+        }
         try {
 	        Iterator<Literal> titles = node.getLiterals(DCTERMS.title);
 	        while (titles.hasNext()) {
@@ -194,7 +201,9 @@ public class PatentTextExtractor implements RdfDigester {
 	        }
         }
         finally {
-        	rl.unlock();
+            if (lock != null) {
+    		lock.unlock();
+            }
         }
         
         if(!"".equals(textContent)) {
