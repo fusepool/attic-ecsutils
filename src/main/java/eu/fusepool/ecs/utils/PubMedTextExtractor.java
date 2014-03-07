@@ -103,7 +103,7 @@ public class PubMedTextExtractor implements RdfDigester {
 	public void extractText(MGraph graph) {
 		String text = "";
 		// select all the resources that are bibo:Document and do not have a sioc:content property 
-		Set<UriRef> articleRefs = getArticles( (LockableMGraph) graph);
+		Set<UriRef> articleRefs = getArticles( graph);
 		for (UriRef articleRef : articleRefs) {                        
             
             log.info("Adding sioc:content property to article: " + articleRef.getUnicodeString());
@@ -150,11 +150,14 @@ public class PubMedTextExtractor implements RdfDigester {
      * Select all resources of type bibo:Document that do not have a sioc:content property and have at least a
      * dcterms:title property.
      */
-    private Set<UriRef> getArticles(LockableMGraph graph) {
+    private Set<UriRef> getArticles(MGraph graph) {
     	Set<UriRef> result = new HashSet<UriRef>();
     	
-    	Lock lock = graph.getLock().readLock();
-    	lock.lock();
+    	Lock lock = null;
+        if (graph instanceof LockableMGraph) {
+            lock = ((LockableMGraph)graph).getLock().readLock();
+            lock.lock();
+        }
     	try {
 	        Iterator<Triple> idocument = graph.filter(null, RDF.type, BibliographicOntology.Document);
 	        while (idocument.hasNext()) {
@@ -167,8 +170,10 @@ public class PubMedTextExtractor implements RdfDigester {
 	        }
     	}
     	finally {
-    		lock.unlock();
-    	}
+            if (lock != null) {
+            lock.unlock();
+            }
+        }
         
         log.info(result.size() + " Document nodes found.");
         
@@ -187,8 +192,12 @@ public class PubMedTextExtractor implements RdfDigester {
     	String textContent = "";
     	
     	GraphNode node = new GraphNode(articleRef, graph);
-    	Lock lock = node.readLock();
-    	lock.lock();
+    	
+    	Lock lock = null;
+        if (graph instanceof LockableMGraph) {
+            lock = ((LockableMGraph)graph).getLock().readLock();
+            lock.lock();
+        }
     	try {    	
 	        Iterator<Literal> titles = node.getLiterals(DCTERMS.title);
 	        while (titles.hasNext()) {
@@ -203,8 +212,10 @@ public class PubMedTextExtractor implements RdfDigester {
 	        }
     	}
     	finally {
-    		lock.unlock();
-    	}
+            if (lock != null) {
+            lock.unlock();
+            }
+        }
         
         if(!"".equals(textContent)) {
         	
