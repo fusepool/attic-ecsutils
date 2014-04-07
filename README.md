@@ -1,7 +1,8 @@
 ECS Utils
 ===========
-
-This component provides utility commands for 
+This component provides digesters for the Data Life Cycle service.
+ 
+This component provides also utility commands for 
 - upload of RDF data into the ECS (content graph)
 - enrichment of patent documents and PubMed articles by addition of sioc:content property for indexing and 
   dc.subject properties between documents and entities extracted from transformation of XML data into RDF or
