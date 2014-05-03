@@ -8,6 +8,7 @@ import java.security.AllPermission;
 import java.util.Iterator;
 import java.util.concurrent.locks.Lock;
 
+import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -206,14 +207,18 @@ public class EcsUtils {
     
     /**
      * Change a uri in a canonical form for each subject or object of a triple in the content graph. 
-     * Any urn type of URI is changed to a http type. Specifically replaces urn:x-temp: with 
-     * http://platform.fusepool.info
+     * Any urn type of URI is changed to a http type. Specifically replaces a non canonical URI prefix
+     * (e.g. urn:x-temp: ) with a canonical one (e.g. http://platform.fusepool.info ). The two prefixes 
+     * must be passed as arguments.
      */
     @POST
     @Path("canonicalUri")
     @Produces("text/plain")
-    public String canonicalUri(@Context final UriInfo uriInfo) throws Exception {
+    public String canonicalUri(@Context final UriInfo uriInfo,
+                               @FormParam("non_canonical") final String NON_CANONICAL_URI_PREFIX,
+                               @FormParam("canonical") final String CANONICAL_URI_PREFIX) throws Exception {
         String message = "";
+        log.info("Starting canonicalization of URIs in content graph.");
         AccessController.checkPermission(new AllPermission());
         int ncTripleCount = 0;
         // Collection of triples with non canonical URIs to be removed from the content graph
@@ -228,20 +233,20 @@ public class EcsUtils {
                 Triple triple = incTriplesSubj.next();
                 // check subjects
                 UriRef subjectRef = (UriRef) triple.getSubject();
-                if ( subjectRef.getUnicodeString().startsWith("urn:x-temp:") ){
+                if ( subjectRef.getUnicodeString().startsWith(NON_CANONICAL_URI_PREFIX) ){
                     //log.(subjectRef.getUnicodeString() + " " + triple.getPredicate().getUnicodeString() + " " + triple.getObject().toString());
                     ncTripleCount++;
                     ncTriples.add(triple);
-                    String subId = subjectRef.getUnicodeString().substring("urn:x-temp:".length());
-                    String canSubjectName = "http://platform.fusepool.info" + subId;
+                    String subId = subjectRef.getUnicodeString().substring(NON_CANONICAL_URI_PREFIX.length());
+                    String canSubjectName = CANONICAL_URI_PREFIX + subId;
                     UriRef canSubjectRef = new UriRef(canSubjectName);
                     Resource object = triple.getObject();
                     Resource canObjectRes = null;
                     if (object instanceof UriRef){
                         String objName = ((UriRef) object).getUnicodeString();                        
-                        if(objName.startsWith("urn:x-temp:")){
-                            String objId = objName.substring("urn:x-temp:".length());
-                            String canObjectName = "http://platform.fusepool.info" + objId;
+                        if(objName.startsWith(NON_CANONICAL_URI_PREFIX)){
+                            String objId = objName.substring(NON_CANONICAL_URI_PREFIX.length());
+                            String canObjectName = CANONICAL_URI_PREFIX + objId;
                             canObjectRes = new UriRef(canObjectName);                            
                         }
                         else {
@@ -256,6 +261,7 @@ public class EcsUtils {
                     cTriples.add(canTriple);
                 }            
             }
+            // check predicates (to be implemented)
             // check objects
             Iterator<Triple> incTriplesObj = getContentGraph().filter(null, null, null);
             while(incTriplesObj.hasNext()){   
@@ -289,7 +295,7 @@ public class EcsUtils {
             getContentGraph().addAll(cTriples);
         }
         
-        message = ncTripleCount + " triples with non canonical uri in the content graph have been updated with canonical uri ( http://platform.fusepool.info ).";
+        message = ncTripleCount + " triples with non canonical uri in the content graph have been replaced with canonical uri ( http://platform.fusepool.info ).";
         log.info(message);
         return message;
     }
