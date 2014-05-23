@@ -27,8 +27,10 @@ import org.apache.clerezza.rdf.core.Triple;
 import org.apache.clerezza.rdf.core.TripleCollection;
 import org.apache.clerezza.rdf.core.UriRef;
 import org.apache.clerezza.rdf.core.access.LockableMGraph;
+import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.core.impl.PlainLiteralImpl;
 import org.apache.clerezza.rdf.core.impl.TripleImpl;
+import org.apache.clerezza.rdf.core.impl.TypedLiteralImpl;
 import org.apache.clerezza.rdf.core.serializedform.Parser;
 import org.apache.clerezza.rdf.ontologies.RDF;
 import org.apache.clerezza.rdf.ontologies.RDFS;
@@ -72,10 +74,15 @@ public class EcsUtils {
     @Reference
     private SiteManager siteManager;
     /**
-     * This service allows accessing and creating persistent triple collections
+     * This service allows accessing and creating triples in content graph 
      */
     @Reference
     private ContentGraphProvider contentGraphProvider;
+    /**
+     * This service allows accessing and creating persistent triple collections
+     */
+    @Reference
+    private TcManager tcManager;
     @Reference
     private Parser parser;
     @Reference
@@ -206,7 +213,7 @@ public class EcsUtils {
     }
     
     /**
-     * Change a uri in a canonical form for each subject or object of a triple in the content graph. 
+     * Change a uri in a canonical form for each subject or object of a triple in the provided graph. 
      * Any urn type of URI is changed to a http type. Specifically replaces a non canonical URI prefix
      * (e.g. urn:x-temp: ) with a canonical one (e.g. http://platform.fusepool.info ). The two prefixes 
      * must be passed as arguments.
@@ -216,19 +223,21 @@ public class EcsUtils {
     @Produces("text/plain")
     public String canonicalUri(@Context final UriInfo uriInfo,
                                @FormParam("non_canonical") final String NON_CANONICAL_URI_PREFIX,
-                               @FormParam("canonical") final String CANONICAL_URI_PREFIX) throws Exception {
+                               @FormParam("canonical") final String CANONICAL_URI_PREFIX,
+                               @FormParam("graph") final UriRef graphRef) throws Exception {
         String message = "";
-        log.info("Starting canonicalization of URIs in content graph.");
+        log.info("Starting canonicalization of URIs in graph " + graphRef.getUnicodeString());
         AccessController.checkPermission(new AllPermission());
         int ncTripleCount = 0;
         // Collection of triples with non canonical URIs to be removed from the content graph
         MGraph ncTriples = new IndexedMGraph();
         // Collection of triples with canonical URIs to replace in the content graph
         MGraph cTriples = new IndexedMGraph(); 
-        Lock rl = getContentGraph().getLock().readLock();
+        LockableMGraph graph = tcManager.getMGraph(graphRef);
+        Lock rl = graph.getLock().readLock();
         rl.lock();
         try {
-            Iterator<Triple> incTriplesSubj = getContentGraph().filter(null, null, null);
+            Iterator<Triple> incTriplesSubj = graph.filter(null, null, null);
             while(incTriplesSubj.hasNext()){
                 Triple triple = incTriplesSubj.next();
                 // check subjects
@@ -242,7 +251,7 @@ public class EcsUtils {
                     UriRef canSubjectRef = new UriRef(canSubjectName);
                     Resource object = triple.getObject();
                     Resource canObjectRes = null;
-                    if (object instanceof UriRef){
+                    if ( object instanceof UriRef ){
                         String objName = ((UriRef) object).getUnicodeString();                        
                         if(objName.startsWith(NON_CANONICAL_URI_PREFIX)){
                             String objId = objName.substring(NON_CANONICAL_URI_PREFIX.length());
@@ -252,6 +261,9 @@ public class EcsUtils {
                         else {
                             canObjectRes = new UriRef(objName);
                         }
+                    }
+                    else if( object instanceof TypedLiteralImpl ){                        
+                        canObjectRes = object; 
                     }
                     else {
                         String literalvalue = ((PlainLiteralImpl) object).getLexicalForm();
@@ -263,19 +275,19 @@ public class EcsUtils {
             }
             // check predicates (to be implemented)
             // check objects
-            Iterator<Triple> incTriplesObj = getContentGraph().filter(null, null, null);
+            Iterator<Triple> incTriplesObj = graph.filter(null, null, null);
             while(incTriplesObj.hasNext()){   
                 Triple triple = incTriplesObj.next();
                 Resource object = triple.getObject();                
                 if (object instanceof UriRef){
                     Resource canObjectRes = null;
                     String objName = ((UriRef) object).getUnicodeString();                        
-                    if(objName.startsWith("urn:x-temp:")){
+                    if(objName.startsWith(NON_CANONICAL_URI_PREFIX)){
                         //log.info(triple.getSubject().toString() + " " + triple.getPredicate().getUnicodeString() + " " + triple.getObject().toString());
                         ncTripleCount++;
                         ncTriples.add(triple);
-                        String objId = objName.substring("urn:x-temp:".length());
-                        String canObjectName = "http://platform.fusepool.info" + objId;
+                        String objId = objName.substring(NON_CANONICAL_URI_PREFIX.length());
+                        String canObjectName = CANONICAL_URI_PREFIX + objId;
                         canObjectRes = new UriRef(canObjectName);
                         UriRef subjRef = new UriRef( ((UriRef) triple.getSubject()).getUnicodeString());
                         Triple canTriple = new TripleImpl(subjRef, triple.getPredicate(), canObjectRes);
@@ -291,11 +303,11 @@ public class EcsUtils {
         }
         
         if(ncTriples.size() > 0){
-            getContentGraph().removeAll(ncTriples);
-            getContentGraph().addAll(cTriples);
+            graph.removeAll(ncTriples);
+            graph.addAll(cTriples);
         }
         
-        message = ncTripleCount + " triples with non canonical uri in the content graph have been replaced with canonical uri ( http://platform.fusepool.info ).";
+        message = ncTripleCount + " triples with non canonical uri in " + graphRef.getUnicodeString() + " have been replaced with canonical uri " + CANONICAL_URI_PREFIX;
         log.info(message);
         return message;
     }
